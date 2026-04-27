@@ -1,1 +1,3 @@
-import { env } from './config/env.js'
+import { runRepl } from './cli/repl.js'
+
+await runRepl()
