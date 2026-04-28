@@ -2,9 +2,15 @@ import type { MessageStreamEvent } from '@anthropic-ai/sdk/resources/messages'
 import { env } from '../config/env.js'
 import { getAnthropicClient } from './anthropic-client.js'
 import { DEFAULT_MAX_TOKENS } from './constants.js'
-import { createTextBlock, createToolUseBlock } from './content-blocks.js'
+import {
+  createRedactedThinkingBlock,
+  createTextBlock,
+  createThinkingBlock,
+  createToolUseBlock
+} from './content-blocks.js'
 import type {
   AssistantContentBlock,
+  ThinkingBlock,
   StreamMessageEvent,
   StreamMessageInput,
   StreamMessageResult,
@@ -46,6 +52,17 @@ export async function* streamMessage(
           content[event.index] = createTextBlock('')
         }
 
+        if (event.content_block.type === 'thinking') {
+          content[event.index] = createThinkingBlock(
+            event.content_block.thinking,
+            event.content_block.signature
+          )
+        }
+
+        if (event.content_block.type === 'redacted_thinking') {
+          content[event.index] = createRedactedThinkingBlock(event.content_block.data)
+        }
+
         if (event.content_block.type === 'tool_use') {
           content[event.index] = createToolUseBlock(
             event.content_block.id,
@@ -66,6 +83,16 @@ export async function* streamMessage(
           const block = getTextBlock(content, event.index)
           block.text += event.delta.text
           yield { type: 'text', text: event.delta.text }
+        }
+
+        if (event.delta.type === 'thinking_delta') {
+          const block = getThinkingBlock(content, event.index)
+          block.thinking += event.delta.thinking
+        }
+
+        if (event.delta.type === 'signature_delta') {
+          const block = getThinkingBlock(content, event.index)
+          block.signature = event.delta.signature
         }
 
         if (event.delta.type === 'input_json_delta') {
@@ -145,6 +172,20 @@ function getTextBlock(content: AssistantContentBlock[], index: number): TextBloc
   return block
 }
 
+function getThinkingBlock(content: AssistantContentBlock[], index: number): ThinkingBlock {
+  const block = content[index]
+
+  if (!block) {
+    throw new Error(`Received thinking delta before content block start at index ${index}`)
+  }
+
+  if (block.type !== 'thinking') {
+    throw new Error(`Received thinking delta for non-thinking content block at index ${index}`)
+  }
+
+  return block
+}
+
 function parseToolInput(pendingToolJson: string, block: ToolUseBlock): Record<string, unknown> {
   let parsed: unknown
 
@@ -173,5 +214,11 @@ function compactContent(content: AssistantContentBlock[]): AssistantContentBlock
 }
 
 function isAssistantContentBlock(value: unknown): value is AssistantContentBlock {
-  return isRecord(value) && (value.type === 'text' || value.type === 'tool_use')
+  return (
+    isRecord(value) &&
+    (value.type === 'text' ||
+      value.type === 'tool_use' ||
+      value.type === 'thinking' ||
+      value.type === 'redacted_thinking')
+  )
 }

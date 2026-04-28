@@ -12,6 +12,16 @@ export class ChatSession {
     this.messages.push(result.assistantMessage)
   }
 
+  addMessage(message: MessageParam): void {
+    this.messages.push(message)
+  }
+
+  addMessages(messages: MessageParam[]): void {
+    for (const message of messages) {
+      this.addMessage(message)
+    }
+  }
+
   clear(): void {
     this.messages.length = 0
   }

@@ -44,6 +44,66 @@ describe('ChatSession', () => {
     ])
   })
 
+  it('adds a raw Anthropic message', () => {
+    const session = new ChatSession()
+
+    session.addMessage({
+      role: 'user',
+      content: [
+        {
+          type: 'tool_result',
+          tool_use_id: 'toolu_1',
+          content: 'ok'
+        }
+      ]
+    })
+
+    expect(session.getMessages()).toEqual([
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'toolu_1',
+            content: 'ok'
+          }
+        ]
+      }
+    ])
+  })
+
+  it('adds multiple raw Anthropic messages in order', () => {
+    const session = new ChatSession()
+
+    session.addMessages([
+      { role: 'assistant', content: [{ type: 'text', text: 'checking' }] },
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'toolu_1',
+            content: 'ok'
+          }
+        ]
+      }
+    ])
+
+    expect(session.getMessages()).toEqual([
+      { role: 'assistant', content: [{ type: 'text', text: 'checking' }] },
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'toolu_1',
+            content: 'ok'
+          }
+        ]
+      }
+    ])
+  })
+
   it('clears message history', () => {
     const session = new ChatSession()
 

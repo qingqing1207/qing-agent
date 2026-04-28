@@ -12,7 +12,22 @@ export type ToolUseBlock = {
   input: Record<string, unknown>
 }
 
-export type AssistantContentBlock = TextBlock | ToolUseBlock
+export type ThinkingBlock = {
+  type: 'thinking'
+  thinking: string
+  signature: string
+}
+
+export type RedactedThinkingBlock = {
+  type: 'redacted_thinking'
+  data: string
+}
+
+export type AssistantContentBlock =
+  | TextBlock
+  | ToolUseBlock
+  | ThinkingBlock
+  | RedactedThinkingBlock
 
 export type Usage = {
   inputTokens: number

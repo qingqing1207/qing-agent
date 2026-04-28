@@ -76,6 +76,55 @@ describe('streamMessage', () => {
     ])
   })
 
+  it('preserves thinking blocks without emitting thinking events', async () => {
+    const { events, result } = await collectStream([
+      thinkingBlockStart({ index: 0 }),
+      thinkingDelta({ index: 0, thinking: 'I should inspect ' }),
+      thinkingDelta({ index: 0, thinking: 'the file.' }),
+      signatureDelta({ index: 0, signature: 'sig_1' }),
+      contentBlockStop({ index: 0 }),
+      textBlockStart({ index: 1 }),
+      textDelta({ index: 1, text: 'The file starts the REPL.' }),
+      contentBlockStop({ index: 1 }),
+      messageStop()
+    ])
+
+    expect(events).toEqual([
+      { type: 'text', text: 'The file starts the REPL.' },
+      {
+        type: 'message_done',
+        stopReason: 'end_turn',
+        usage: { inputTokens: 0, outputTokens: 0 }
+      }
+    ])
+    expect(result.assistantMessage.content).toEqual([
+      {
+        type: 'thinking',
+        thinking: 'I should inspect the file.',
+        signature: 'sig_1'
+      },
+      {
+        type: 'text',
+        text: 'The file starts the REPL.'
+      }
+    ])
+  })
+
+  it('preserves redacted thinking blocks', async () => {
+    const { result } = await collectStream([
+      redactedThinkingBlockStart({ index: 0, data: 'redacted_payload' }),
+      contentBlockStop({ index: 0 }),
+      messageStop()
+    ])
+
+    expect(result.assistantMessage.content).toEqual([
+      {
+        type: 'redacted_thinking',
+        data: 'redacted_payload'
+      }
+    ])
+  })
+
   it('compacts sparse content indexes in the final assistant message', async () => {
     const { result } = await collectStream([
       textBlockStart({ index: 1 }),
@@ -206,6 +255,29 @@ function toolUseBlockStart(input: { index: number; id: string; name: string }): 
   })
 }
 
+function thinkingBlockStart(input: { index: number }): MessageStreamEvent {
+  return toMessageStreamEvent({
+    type: 'content_block_start',
+    index: input.index,
+    content_block: {
+      type: 'thinking',
+      thinking: '',
+      signature: ''
+    }
+  })
+}
+
+function redactedThinkingBlockStart(input: { index: number; data: string }): MessageStreamEvent {
+  return toMessageStreamEvent({
+    type: 'content_block_start',
+    index: input.index,
+    content_block: {
+      type: 'redacted_thinking',
+      data: input.data
+    }
+  })
+}
+
 function textDelta(input: { index: number; text: string }): MessageStreamEvent {
   return {
     type: 'content_block_delta',
@@ -213,6 +285,28 @@ function textDelta(input: { index: number; text: string }): MessageStreamEvent {
     delta: {
       type: 'text_delta',
       text: input.text
+    }
+  }
+}
+
+function thinkingDelta(input: { index: number; thinking: string }): MessageStreamEvent {
+  return {
+    type: 'content_block_delta',
+    index: input.index,
+    delta: {
+      type: 'thinking_delta',
+      thinking: input.thinking
+    }
+  }
+}
+
+function signatureDelta(input: { index: number; signature: string }): MessageStreamEvent {
+  return {
+    type: 'content_block_delta',
+    index: input.index,
+    delta: {
+      type: 'signature_delta',
+      signature: input.signature
     }
   }
 }

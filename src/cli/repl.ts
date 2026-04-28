@@ -1,28 +1,28 @@
 import type { MessageParam, Model } from '@anthropic-ai/sdk/resources/messages'
+import { runAgentTurn } from '../agent/agent-loop.js'
+import type { AgentTurnEvent, AgentTurnResult, AgentTurnInput } from '../agent/agent-loop.js'
 import { ChatSession } from '../chat/chat-session.js'
-import { streamMessage } from '../llm/stream-message.js'
-import type { StreamMessageEvent, StreamMessageInput, StreamMessageResult } from '../llm/types.js'
 import { consoleRenderer } from './console-renderer.js'
 import { parseReplInput } from './commands.js'
 import { createReadlineInputReader } from './readline-prompt.js'
 import type { InputReader, Renderer } from './types.js'
 
-type SendMessage = (
-  input: StreamMessageInput
-) => AsyncGenerator<StreamMessageEvent, StreamMessageResult>
+type RunAgentTurn = (input: AgentTurnInput) => AsyncGenerator<AgentTurnEvent, AgentTurnResult>
 
 export type ReplOptions = {
   model?: Model
   system?: string
   inputReader?: InputReader
   renderer?: Renderer
-  sendMessage?: SendMessage
+  runAgentTurn?: RunAgentTurn
+  cwd?: string
 }
 
 export async function runRepl(options: ReplOptions = {}): Promise<void> {
   const inputReader = options.inputReader ?? createReadlineInputReader()
   const renderer = options.renderer ?? consoleRenderer
-  const sendMessage = options.sendMessage ?? streamMessage
+  const runTurn = options.runAgentTurn ?? runAgentTurn
+  const cwd = options.cwd ?? process.cwd()
   const session = new ChatSession()
 
   renderer.line('Qing Agent REPL')
@@ -49,15 +49,16 @@ export async function runRepl(options: ReplOptions = {}): Promise<void> {
       session.addUserMessage(command.text)
 
       try {
-        const result = await renderAssistantTurn({
+        const result = await renderAgentTurn({
           messages: session.getMessages(),
-          sendMessage,
+          cwd,
+          runAgentTurn: runTurn,
           renderer,
           ...(options.model !== undefined ? { model: options.model } : {}),
           ...(options.system !== undefined ? { system: options.system } : {})
         })
 
-        session.addAssistantMessage(result)
+        session.addMessages(result.messagesToAppend)
         renderer.line(`(tokens in/out: ${result.usage.inputTokens}/${result.usage.outputTokens})`)
       } catch (error) {
         renderer.line()
@@ -69,22 +70,24 @@ export async function runRepl(options: ReplOptions = {}): Promise<void> {
   }
 }
 
-type RenderAssistantTurnInput = {
+type RenderAgentTurnInput = {
   messages: MessageParam[]
+  cwd: string
   model?: Model
   system?: string
-  sendMessage: SendMessage
+  runAgentTurn: RunAgentTurn
   renderer: Renderer
 }
 
-async function renderAssistantTurn(input: RenderAssistantTurnInput): Promise<StreamMessageResult> {
-  const stream = input.sendMessage({
+async function renderAgentTurn(input: RenderAgentTurnInput): Promise<AgentTurnResult> {
+  const stream = input.runAgentTurn({
     messages: input.messages,
+    cwd: input.cwd,
     ...(input.model !== undefined ? { model: input.model } : {}),
     ...(input.system !== undefined ? { system: input.system } : {})
   })
 
-  input.renderer.write('assistant: ')
+  let needsAssistantPrefix = true
 
   while (true) {
     const next = await stream.next()
@@ -94,19 +97,36 @@ async function renderAssistantTurn(input: RenderAssistantTurnInput): Promise<Str
       return next.value
     }
 
-    renderStreamEvent(next.value, input.renderer)
+    needsAssistantPrefix = renderAgentTurnEvent(next.value, input.renderer, needsAssistantPrefix)
   }
 }
 
-function renderStreamEvent(event: StreamMessageEvent, renderer: Renderer): void {
+function renderAgentTurnEvent(
+  event: AgentTurnEvent,
+  renderer: Renderer,
+  needsAssistantPrefix: boolean
+): boolean {
   if (event.type === 'text') {
+    if (needsAssistantPrefix) {
+      renderer.write('assistant: ')
+    }
+
     renderer.write(event.text)
+    return false
   }
 
   if (event.type === 'tool_use_start') {
     renderer.line()
     renderer.line(`[tool: ${event.name}]`)
+    return true
   }
+
+  if (event.type === 'tool_result') {
+    renderer.line(`[tool result: ${event.toolName} ${event.isError ? 'error' : 'ok'}]`)
+    return true
+  }
+
+  return needsAssistantPrefix
 }
 
 function formatError(error: unknown): string {
