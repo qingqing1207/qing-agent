@@ -15,10 +15,12 @@ describe('globTool', () => {
     outsideRoot = path.join(tempRoot, 'outside')
 
     await fs.mkdir(path.join(workspaceRoot, 'src', 'llm'), { recursive: true })
+    await fs.mkdir(path.join(workspaceRoot, 'src', 'tools', 'glob'), { recursive: true })
     await fs.mkdir(outsideRoot, { recursive: true })
 
     await fs.writeFile(path.join(workspaceRoot, 'src', 'index.ts'), 'export {}\n')
     await fs.writeFile(path.join(workspaceRoot, 'src', 'llm', 'types.ts'), 'export {}\n')
+    await fs.writeFile(path.join(workspaceRoot, 'src', 'tools', 'glob', 'index.ts'), 'export {}\n')
     await fs.writeFile(path.join(workspaceRoot, 'README.md'), '# test\n')
     await fs.writeFile(path.join(outsideRoot, 'secret.ts'), 'secret\n')
   })
@@ -32,7 +34,26 @@ describe('globTool', () => {
 
     expect(result.isError).toBeUndefined()
     expect(result.content).toContain('index.ts')
+    expect(result.content).not.toContain(path.join('llm', 'types.ts'))
+  })
+
+  it('matches double-star patterns across root and nested directories', async () => {
+    const result = await globTool.call({ pattern: '**/*.ts', path: 'src' }, { cwd: workspaceRoot })
+
+    expect(result.isError).toBeUndefined()
+    expect(result.content).toContain('index.ts')
     expect(result.content).toContain(path.join('llm', 'types.ts'))
+    expect(result.content).toContain(path.join('tools', 'glob', 'index.ts'))
+  })
+
+  it('matches double-star patterns under a fixed directory prefix', async () => {
+    const result = await globTool.call(
+      { pattern: 'tools/**/*.ts', path: 'src' },
+      { cwd: workspaceRoot }
+    )
+
+    expect(result.isError).toBeUndefined()
+    expect(result.content).toBe(path.join('tools', 'glob', 'index.ts'))
   })
 
   it('uses workspace root when path is omitted', async () => {

@@ -123,6 +123,9 @@ function renderAgentTurnEvent(
 
   if (event.type === 'tool_result') {
     renderer.line(`[tool result: ${event.toolName} ${event.isError ? 'error' : 'ok'}]`)
+    renderer.line(`[tool input: ${formatToolInput(event.input)}]`)
+    // 后续可以在这里按工具类型做特殊显示，例如 Glob 打印路径列表，Read 打印摘要。
+    renderer.line(event.content)
     return true
   }
 
@@ -135,4 +138,8 @@ function formatError(error: unknown): string {
   }
 
   return String(error)
+}
+
+function formatToolInput(input: Record<string, unknown>): string {
+  return JSON.stringify(input)
 }

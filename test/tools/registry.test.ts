@@ -7,8 +7,13 @@ describe('tools registry', () => {
     expect(allTools.map((tool) => tool.name)).toContain('Read')
   })
 
+  it('registers the Glob tool', () => {
+    expect(allTools.map((tool) => tool.name)).toContain('Glob')
+  })
+
   it('finds a tool by name', () => {
     expect(findToolByName('Read')?.name).toBe('Read')
+    expect(findToolByName('Glob')?.name).toBe('Glob')
   })
 
   it('returns undefined for an unknown tool', () => {

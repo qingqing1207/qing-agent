@@ -82,7 +82,14 @@ describe('runAgentTurn', () => {
 
     expect(events).toEqual([
       { type: 'tool_use_start', id: 'toolu_1', name: 'Read' },
-      { type: 'tool_result', toolUseId: 'toolu_1', toolName: 'Read', isError: false },
+      {
+        type: 'tool_result',
+        toolUseId: 'toolu_1',
+        toolName: 'Read',
+        input: { file_path: 'src/index.ts' },
+        content: 'file content',
+        isError: false
+      },
       { type: 'text', text: 'final answer' }
     ])
     expect(result.messagesToAppend).toEqual([
@@ -172,6 +179,8 @@ describe('runAgentTurn', () => {
       type: 'tool_result',
       toolUseId: 'toolu_1',
       toolName: 'MissingTool',
+      input: { file_path: 'src/index.ts' },
+      content: 'Error: unknown tool MissingTool',
       isError: true
     })
     expect(result.messagesToAppend[1]).toEqual({
@@ -205,6 +214,8 @@ describe('runAgentTurn', () => {
       type: 'tool_result',
       toolUseId: 'toolu_1',
       toolName: 'Read',
+      input: { file_path: 'src/index.ts' },
+      content: 'Error running tool Read: boom',
       isError: true
     })
     expect(result.messagesToAppend[1]).toEqual({

@@ -43,7 +43,14 @@ describe('runRepl', () => {
         createAgentTurnFromResult({
           events: [
             { type: 'tool_use_start', id: 'toolu_1', name: 'Read' },
-            { type: 'tool_result', toolUseId: 'toolu_1', toolName: 'Read', isError: false },
+            {
+              type: 'tool_result',
+              toolUseId: 'toolu_1',
+              toolName: 'Read',
+              input: { file_path: 'src/index.ts' },
+              content: 'file content',
+              isError: false
+            },
             { type: 'text', text: 'done' }
           ],
           result: {
@@ -119,6 +126,8 @@ describe('runRepl', () => {
 
     expect(renderer.text()).toContain('[tool: Read]')
     expect(renderer.text()).toContain('[tool result: Read ok]')
+    expect(renderer.text()).toContain('[tool input: {"file_path":"src/index.ts"}]')
+    expect(renderer.text()).toContain('file content')
     expect(renderer.text()).toContain('assistant: done')
   })
 

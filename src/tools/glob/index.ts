@@ -1,5 +1,4 @@
-import fs from 'node:fs/promises'
-import path from 'node:path'
+import fastGlob from 'fast-glob'
 import { z } from 'zod'
 import { resolveExistingWorkspacePath } from '../workspace-path.js'
 import type { AgentTool, JsonObject, ToolCallResult, ToolInputSchema } from '../types.js'
@@ -56,9 +55,7 @@ export const globTool: AgentTool = {
 
     try {
       const searchRoot = await resolveExistingWorkspacePath(parsed.data.path, context.cwd)
-      const files = await listFiles(searchRoot)
-      const matches = files
-        .filter((filePath) => matchesGlob(filePath, parsed.data.pattern))
+      const matches = (await findMatchingFiles(parsed.data.pattern, searchRoot))
         .sort()
         .slice(0, parsed.data.limit)
 
@@ -73,57 +70,13 @@ export const globTool: AgentTool = {
   }
 }
 
-async function listFiles(root: string, current = root): Promise<string[]> {
-  const entries = await fs.readdir(current, { withFileTypes: true })
-  const files: string[] = []
-
-  for (const entry of entries) {
-    if (shouldSkipEntry(entry.name)) {
-      continue
-    }
-
-    const fullPath = path.join(current, entry.name)
-
-    if (entry.isDirectory()) {
-      files.push(...(await listFiles(root, fullPath)))
-      continue
-    }
-
-    if (entry.isFile()) {
-      files.push(path.relative(root, fullPath))
-    }
-  }
-
-  return files
-}
-
-function shouldSkipEntry(name: string): boolean {
-  return name === '.git' || name === 'node_modules' || name === 'dist'
-}
-
-function matchesGlob(filePath: string, pattern: string): boolean {
-  const normalizedFilePath = filePath.split(path.sep).join('/')
-  const normalizedPattern = pattern.split(path.sep).join('/')
-
-  if (!normalizedPattern.includes('/')) {
-    return matchesGlobSegment(path.basename(normalizedFilePath), normalizedPattern)
-  }
-
-  return globToRegExp(normalizedPattern).test(normalizedFilePath)
-}
-
-function matchesGlobSegment(value: string, pattern: string): boolean {
-  return globToRegExp(pattern).test(value)
-}
-
-function globToRegExp(pattern: string): RegExp {
-  const escaped = pattern
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-    .replace(/\*\*/g, '.*')
-    .replace(/\*/g, '[^/]*')
-    .replace(/\?/g, '[^/]')
-
-  return new RegExp(`^${escaped}$`)
+async function findMatchingFiles(pattern: string, cwd: string): Promise<string[]> {
+  return fastGlob(pattern, {
+    cwd,
+    onlyFiles: true,
+    followSymbolicLinks: false,
+    ignore: ['**/.git/**', '**/node_modules/**', '**/dist/**']
+  })
 }
 
 function errorResult(content: string): ToolCallResult {

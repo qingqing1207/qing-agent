@@ -16,7 +16,14 @@ export const DEFAULT_MAX_TOOL_ROUNDS = 8
 
 export type AgentTurnEvent =
   | StreamMessageEvent
-  | { type: 'tool_result'; toolUseId: string; toolName: string; isError: boolean }
+  | {
+      type: 'tool_result'
+      toolUseId: string
+      toolName: string
+      input: Record<string, unknown>
+      content: string
+      isError: boolean
+    }
 
 export type AgentTurnResult = {
   messagesToAppend: MessageParam[]
@@ -102,6 +109,8 @@ export async function* runAgentTurn(
         type: 'tool_result',
         toolUseId: toolUse.id,
         toolName: toolUse.name,
+        input: toolUse.input,
+        content: toolResult.content,
         isError: Boolean(toolResult.isError)
       }
     }
