@@ -26,6 +26,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
     "@vscode/ripgrep": "^1.17.1",
+    "diff": "^9.0.0",
     "dotenv": "^17.4.2",
     "execa": "^9.6.1",
     "fast-glob": "^3.3.3",

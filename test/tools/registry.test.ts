@@ -15,10 +15,15 @@ describe('tools registry', () => {
     expect(allTools.map((tool) => tool.name)).toContain('Grep')
   })
 
+  it('registers the Edit tool', () => {
+    expect(allTools.map((tool) => tool.name)).toContain('Edit')
+  })
+
   it('finds a tool by name', () => {
     expect(findToolByName('Read')?.name).toBe('Read')
     expect(findToolByName('Glob')?.name).toBe('Glob')
     expect(findToolByName('Grep')?.name).toBe('Grep')
+    expect(findToolByName('Edit')?.name).toBe('Edit')
   })
 
   it('returns undefined for an unknown tool', () => {
@@ -51,6 +56,10 @@ describe('tools registry', () => {
         }
       }
     ])
+  })
+
+  it('omits Edit from Anthropic API params by default', () => {
+    expect(getToolsApiParams().map((tool) => tool.name)).not.toContain('Edit')
   })
 })
 
