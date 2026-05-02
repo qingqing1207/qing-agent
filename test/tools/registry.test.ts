@@ -11,9 +11,14 @@ describe('tools registry', () => {
     expect(allTools.map((tool) => tool.name)).toContain('Glob')
   })
 
+  it('registers the Grep tool', () => {
+    expect(allTools.map((tool) => tool.name)).toContain('Grep')
+  })
+
   it('finds a tool by name', () => {
     expect(findToolByName('Read')?.name).toBe('Read')
     expect(findToolByName('Glob')?.name).toBe('Glob')
+    expect(findToolByName('Grep')?.name).toBe('Grep')
   })
 
   it('returns undefined for an unknown tool', () => {

@@ -1,10 +1,11 @@
 import type { Tool } from '@anthropic-ai/sdk/resources/messages'
 import { globTool } from './glob/index.js'
+import { grepTool } from './grep/index.js'
 import { readTool } from './read/index.js'
 
 import type { AgentTool, ToolContext } from './types.js'
 
-export const allTools: AgentTool[] = [readTool, globTool]
+export const allTools: AgentTool[] = [readTool, globTool, grepTool]
 
 export function findToolByName(name: string): AgentTool | undefined {
   return allTools.find((tool) => tool.name === name)

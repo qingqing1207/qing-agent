@@ -1,8 +1,6 @@
-# Step 5：核心工具代码解释
+# Step 5：Glob 工具代码解释
 
-本文用于解释 Step 5 正式项目中新增工具的代码。
-
-当前先从 `Glob` 工具开始：
+本文用于解释 Step 5 正式项目中 `Glob` 工具的代码：
 
 ```text
 src/tools/glob/index.ts
@@ -17,8 +15,6 @@ src/tools/glob/index.ts
 4. 使用 fast-glob 查找匹配文件。
 5. 把结果转换成 agent loop 可以回传给模型的 ToolCallResult。
 ```
-
-后续新增 `Grep`、`Edit`、`Write`、`Bash` 时，可以继续在本文追加对应章节。
 
 ## Glob 工具目标
 
@@ -807,39 +803,3 @@ src/tools/registry.ts
 ```
 
 模型就能在正常对话里调用它。
-
-## 后续追加文档建议
-
-后续新增工具时，可以按同样结构追加：
-
-```text
-## Grep 工具
-  - 工具目标
-  - 输入 schema
-  - 搜索实现
-  - 输出限制
-  - 测试 fixture
-
-## Edit 工具
-  - 工具目标
-  - 输入 schema
-  - 路径安全
-  - 字符串替换
-  - 唯一匹配
-  - diff 或摘要
-
-## Write 工具
-  - 工具目标
-  - 输入 schema
-  - 新文件路径安全
-  - fs.mkdir / fs.writeFile
-  - 权限开关
-
-## Bash 工具
-  - 工具目标
-  - 输入 schema
-  - child_process.spawn
-  - stdout/stderr stream
-  - timeout / kill
-  - 用户确认
-```
