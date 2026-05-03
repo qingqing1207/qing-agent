@@ -5,6 +5,7 @@ import { ChatSession } from '../chat/chat-session.js'
 import { consoleRenderer } from './console-renderer.js'
 import { parseReplInput } from './commands.js'
 import { createReadlineInputReader } from './readline-prompt.js'
+import { buildSystemPrompt } from '../prompt/build-system-prompt.js'
 import type { InputReader, Renderer } from './types.js'
 
 type RunAgentTurn = (input: AgentTurnInput) => AsyncGenerator<AgentTurnEvent, AgentTurnResult>
@@ -23,6 +24,7 @@ export async function runRepl(options: ReplOptions = {}): Promise<void> {
   const renderer = options.renderer ?? consoleRenderer
   const runTurn = options.runAgentTurn ?? runAgentTurn
   const cwd = options.cwd ?? process.cwd()
+  const system = options.system ?? (await buildSystemPrompt({ cwd }))
   const session = new ChatSession()
 
   renderer.line('Qing Agent REPL')
@@ -55,7 +57,7 @@ export async function runRepl(options: ReplOptions = {}): Promise<void> {
           runAgentTurn: runTurn,
           renderer,
           ...(options.model !== undefined ? { model: options.model } : {}),
-          ...(options.system !== undefined ? { system: options.system } : {})
+          system
         })
 
         session.addMessages(result.messagesToAppend)
