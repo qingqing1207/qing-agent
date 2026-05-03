@@ -35,6 +35,49 @@ export async function resolveExistingWorkspacePath(filePath: string, cwd: string
   return realCandidatePath
 }
 
+export async function resolveNewWorkspacePath(filePath: string, cwd: string): Promise<string> {
+  const workspaceRoot = await fs.realpath(cwd)
+  const candidatePath = path.resolve(workspaceRoot, filePath)
+
+  if (!isInsideWorkspace(candidatePath, workspaceRoot)) {
+    throw new Error(`Path is outside the workspace: ${filePath}`)
+  }
+
+  const realExistingAncestor = await findRealExistingAncestor(path.dirname(candidatePath))
+
+  if (!isInsideWorkspace(realExistingAncestor, workspaceRoot)) {
+    throw new Error(`Path is outside the workspace: ${filePath}`)
+  }
+
+  return candidatePath
+}
+
+async function findRealExistingAncestor(candidatePath: string): Promise<string> {
+  let currentPath = candidatePath
+
+  while (true) {
+    try {
+      return await fs.realpath(currentPath)
+    } catch (error) {
+      if (!isMissingPathError(error)) {
+        throw error
+      }
+
+      const parentPath = path.dirname(currentPath)
+
+      if (parentPath === currentPath) {
+        throw error
+      }
+
+      currentPath = parentPath
+    }
+  }
+}
+
+function isMissingPathError(error: unknown): boolean {
+  return error instanceof Error && 'code' in error && error.code === 'ENOENT'
+}
+
 function isInsideWorkspace(candidatePath: string, workspaceRoot: string): boolean {
   const relativePath = path.relative(workspaceRoot, candidatePath)
 

@@ -25,15 +25,15 @@ describe('resolveWorkspacePath', () => {
   })
 
   it('resolves a workspace-relative path', async () => {
-    await expect(resolveWorkspacePath('src/index.ts', workspaceRoot)).resolves.toBe(
-      path.join(workspaceRoot, 'src', 'index.ts')
-    )
+    const expectedPath = await fs.realpath(path.join(workspaceRoot, 'src', 'index.ts'))
+
+    await expect(resolveWorkspacePath('src/index.ts', workspaceRoot)).resolves.toBe(expectedPath)
   })
 
   it('resolves a dot-prefixed workspace-relative path', async () => {
-    await expect(resolveWorkspacePath('./src/index.ts', workspaceRoot)).resolves.toBe(
-      path.join(workspaceRoot, 'src', 'index.ts')
-    )
+    const expectedPath = await fs.realpath(path.join(workspaceRoot, 'src', 'index.ts'))
+
+    await expect(resolveWorkspacePath('./src/index.ts', workspaceRoot)).resolves.toBe(expectedPath)
   })
 
   it('rejects parent-directory traversal outside the workspace', async () => {

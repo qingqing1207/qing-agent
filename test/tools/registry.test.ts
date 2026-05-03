@@ -19,11 +19,21 @@ describe('tools registry', () => {
     expect(allTools.map((tool) => tool.name)).toContain('Edit')
   })
 
+  it('registers the Write tool', () => {
+    expect(allTools.map((tool) => tool.name)).toContain('Write')
+  })
+
+  it('registers the Bash tool', () => {
+    expect(allTools.map((tool) => tool.name)).toContain('Bash')
+  })
+
   it('finds a tool by name', () => {
     expect(findToolByName('Read')?.name).toBe('Read')
     expect(findToolByName('Glob')?.name).toBe('Glob')
     expect(findToolByName('Grep')?.name).toBe('Grep')
     expect(findToolByName('Edit')?.name).toBe('Edit')
+    expect(findToolByName('Write')?.name).toBe('Write')
+    expect(findToolByName('Bash')?.name).toBe('Bash')
   })
 
   it('returns undefined for an unknown tool', () => {
@@ -58,8 +68,48 @@ describe('tools registry', () => {
     ])
   })
 
-  it('omits Edit from Anthropic API params by default', () => {
-    expect(getToolsApiParams().map((tool) => tool.name)).not.toContain('Edit')
+  it('omits write-capable tools from Anthropic API params by default', () => {
+    const previousWriteTools = process.env.QING_ENABLE_WRITE_TOOLS
+    const previousBashTool = process.env.QING_ENABLE_BASH_TOOL
+
+    try {
+      delete process.env.QING_ENABLE_WRITE_TOOLS
+      delete process.env.QING_ENABLE_BASH_TOOL
+      const toolNames = getToolsApiParams().map((tool) => tool.name)
+
+      expect(toolNames).not.toContain('Edit')
+      expect(toolNames).not.toContain('Write')
+      expect(toolNames).not.toContain('Bash')
+    } finally {
+      restoreEnv('QING_ENABLE_WRITE_TOOLS', previousWriteTools)
+      restoreEnv('QING_ENABLE_BASH_TOOL', previousBashTool)
+    }
+  })
+
+  it('includes write-capable tools in Anthropic API params when enabled', () => {
+    const previous = process.env.QING_ENABLE_WRITE_TOOLS
+
+    try {
+      process.env.QING_ENABLE_WRITE_TOOLS = '1'
+      const toolNames = getToolsApiParams().map((tool) => tool.name)
+
+      expect(toolNames).toContain('Edit')
+      expect(toolNames).toContain('Write')
+    } finally {
+      restoreEnv('QING_ENABLE_WRITE_TOOLS', previous)
+    }
+  })
+
+  it('includes Bash in Anthropic API params when enabled', () => {
+    const previous = process.env.QING_ENABLE_BASH_TOOL
+
+    try {
+      process.env.QING_ENABLE_BASH_TOOL = '1'
+
+      expect(getToolsApiParams().map((tool) => tool.name)).toContain('Bash')
+    } finally {
+      restoreEnv('QING_ENABLE_BASH_TOOL', previous)
+    }
   })
 })
 
@@ -80,4 +130,13 @@ function createTool(overrides: Partial<AgentTool> = {}): AgentTool {
     call: async () => ({ content: 'ok' }),
     ...overrides
   }
+}
+
+function restoreEnv(name: string, value: string | undefined): void {
+  if (value === undefined) {
+    delete process.env[name]
+    return
+  }
+
+  process.env[name] = value
 }
